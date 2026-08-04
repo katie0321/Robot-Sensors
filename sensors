@@ -1,0 +1,89 @@
+from gpiozero import DigitalInputDevice
+from time import sleep
+import serial
+
+import board
+import busio
+import adafruit_bno055
+
+light_sensor = DigitalInputDevice(22)
+vib_sensor = DigitalInputDevice(17)
+sound_sensor = DigitalInputDevice(27)
+
+# i2c = busio.I2C(board.SCL, board.SDA)
+# bno = adafruit_bno055.BNO055_I2C(i2c)
+
+lidar = serial.Serial(
+    "/dev/serial0",
+    baudrate=115200,
+    timeout=0.01
+)
+
+
+def read_tf_luna():
+    # while True:
+    #     if lidar.in_waiting:
+    #         data = lidar.read(lidar.in_waiting)
+    #         print(data)
+
+    if lidar.in_waiting >= 9:
+        data = lidar.read(9)
+
+        if data[0] == 0x59 and data[1] == 0x59:
+            distance = data[2] | (data[3] << 8)
+            strength = data[4] | (data[5] << 8)
+            temperature = ((data[6] | (data[7] << 8)) / 8) - 256
+
+            return distance, strength, temperature
+
+    return None, None, None
+
+
+# print("Light sensor running on GPIO22...")
+
+while True:
+
+    if light_sensor.value:
+        print("DARK detected")
+    else:
+        print("LIGHT detected")
+
+    if vib_sensor.value:
+        print("VIBRATION DETECTED")
+    else:
+        print("No vibration")
+
+    if sound_sensor.value:
+        print("SOUND detected")
+    else:
+        print("NO SOUND")
+
+    distance, strength, temp = read_tf_luna()
+
+    if distance is not None:
+        print(f"Distance: {distance} cm")
+        print(f"Signal Strength: {strength}")
+        print(f"LiDAR Temp: {temp:.1f} C")
+    else:
+        print("No LiDAR data")
+
+    # euler = bno.euler
+    # accel = bno.acceleration
+    # gyro = bno.gyro
+
+    # if euler:
+    #     heading, roll, pitch = euler
+    #     print(f"Heading: {heading:.1f} deg")
+    #     print(f"Roll: {roll:.1f} deg")
+    #     print(f"Pitch: {pitch:.1f} deg")
+
+    # if accel:
+    #     ax, ay, az = accel
+    #     print(f"Accel X:{ax:.2f}  Y:{ay:.2f}  Z:{az:.2f}")
+
+    # if gyro:
+    #     gx, gy, gz = gyro
+    #     print(f"Gyro X:{gx:.2f}  Y:{gy:.2f}  Z:{gz:.2f}")
+
+    print("----------------------------")
+    sleep(0.2)
